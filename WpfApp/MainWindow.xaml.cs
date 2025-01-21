@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+using System;
 using System.Linq;
 using System.Windows;
 using QuestPDF.Fluent;
@@ -19,14 +18,16 @@ namespace WpfApp
         {
             string title = TitleTextBox.Text;
             DateTime? reportDate = ReportDatePicker.SelectedDate;
-            string[] dataLines = DataTextBox.Text.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] dataLines = DataTextBox.Text
+                .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .ToArray();
 
             if (string.IsNullOrWhiteSpace(title) || !reportDate.HasValue || !dataLines.Any())
             {
                 MessageBox.Show("Uzupełnij wszystkie pola przed eksportem.", "Błąd", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
 
             string filePath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "raport.pdf");
 
@@ -37,10 +38,17 @@ namespace WpfApp
                 Items = dataLines
             };
 
-            var document = CreateDocument(reportData);
-            document.GeneratePdf(filePath);
+            try
+            {
+                var document = CreateDocument(reportData);
+                document.GeneratePdf(filePath);
 
-            MessageBox.Show($"Raport zapisano w: {filePath}", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show($"Raport zapisano w: {filePath}", "Sukces", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Wystąpił błąd podczas eksportu: {ex.Message}", "Błąd", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private IDocument CreateDocument(dynamic data)
@@ -70,19 +78,20 @@ namespace WpfApp
                 {
                     table.ColumnsDefinition(columns =>
                     {
-                        columns.RelativeColumn();
+                        columns.RelativeColumn(1); // Kolumna numeru
+                        columns.RelativeColumn(3); // Kolumna opisu
                     });
 
                     table.Header(header =>
                     {
-                        header.Cell().Text("Nr").Bold();
-                        header.Cell().Text("Opis").Bold();
+                        header.Cell().Text("Nr").Bold().Background(Colors.Grey.Lighten3).Padding(5);
+                        header.Cell().Text("Opis").Bold().Background(Colors.Grey.Lighten3).Padding(5);
                     });
 
                     for (int i = 0; i < items.Length; i++)
                     {
-                        table.Cell().Text((i + 1).ToString());
-                        table.Cell().Text(items[i]);
+                        table.Cell().Text((i + 1).ToString()).Padding(5);
+                        table.Cell().Text(items[i]).Padding(5);
                     }
                 });
             };
